@@ -1,10 +1,11 @@
 package database
 
 import (
+	"cinema/internal/logger"
+
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"go.uber.org/zap"
 
 	"gorm.io/gorm"
 )
@@ -16,11 +17,11 @@ func AutoMigDB(db *gorm.DB, models ...interface{}) error {
 	return nil
 }
 
-func MigrationDB(db *gorm.DB, logger *zap.Logger) error {
+func MigrationDB(db *gorm.DB, logger logger.Logger) error {
 	sqlDB, err := db.DB()
 	migrationsPath := "file://D:/Приколюхи/Cinema_at_home/backend/migrations"
 	if err != nil {
-		logger.Sugar().Error("Error init migrations: %s", err)
+		logger.Error("Error init migrations: %s", err)
 	}
 	driver, err := migratepg.WithInstance(sqlDB, &migratepg.Config{})
 	if err != nil {
@@ -32,11 +33,11 @@ func MigrationDB(db *gorm.DB, logger *zap.Logger) error {
 	}
 	if err := migrat.Up(); err != nil {
 		if err == migrate.ErrNoChange {
-			logger.Sugar().Info("No new migrations to apply")
+			logger.Info("No new migrations to apply")
 		} else {
 			return err
 		}
 	}
-	logger.Sugar().Info("Migrations done")
+	logger.Info("Migrations done")
 	return nil
 }

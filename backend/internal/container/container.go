@@ -5,31 +5,32 @@ import (
 	"cinema/internal/database"
 	"cinema/internal/logger"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type Container struct {
-	Config *config.Config
-	DB     *gorm.DB
-	Logger *zap.Logger
+	AppPort string
+	Config  *config.Config
+	DB      *gorm.DB
+	Logger  logger.Logger
 }
 
 func NewContainer() (*Container, error) {
 	cfg := config.NewConfig()
-	log, err := logger.NewLogger()
+	log, err := logger.NewZapLogger()
 	if err != nil {
 		return nil, err
 	}
 	db, err := database.InitDB(cfg.DBDsn, log)
 	if err != nil {
-		log.Sugar().Error("Problems with DB initialization: %s", err.Error())
+		log.Error("Problems with DB initialization", "error", err)
 		return nil, err
 	}
-	log.Sugar().Info("Config and DB initialized")
+	log.Info("Config and DB initialized", "port", cfg.ServerPort)
 	return &Container{
-		Config: cfg,
-		DB:     db,
-		Logger: log,
+		AppPort: cfg.ServerPort,
+		Config:  cfg,
+		DB:      db,
+		Logger:  log,
 	}, nil
 }
