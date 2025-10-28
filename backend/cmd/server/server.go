@@ -25,7 +25,10 @@ func initServer(cont *container.Container) (*Server, error) {
 			cont.Logger.Error("Error with migrations: %s", err)
 		}
 	}
-	database.Seeder(cont.DB)
+	err := database.Seeder(cont.DB)
+	if err != nil {
+		cont.Logger.Error("Error with seeder", "error", err)
+	}
 
 	r := gin.Default()
 

@@ -1,10 +1,18 @@
 package config
 
 import (
+	"embed"
+	_ "embed"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
+)
+
+var (
+	//go:embed genres.json
+	JSONFiles embed.FS
 )
 
 type Config struct {
@@ -19,6 +27,7 @@ func NewConfig() *Config {
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  .env файл не найден, использую системные переменные")
 	}
+	fmt.Print(JSONFiles)
 
 	return &Config{
 		AppEnv:       os.Getenv("APP_ENV"),
@@ -29,9 +38,13 @@ func NewConfig() *Config {
 	}
 }
 
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+func GetJSONFile(filename string) ([]byte, error) {
+	return JSONFiles.ReadFile(filename)
 }
+
+// func getEnv(key, fallback string) string {
+// 	if v := os.Getenv(key); v != "" {
+// 		return v
+// 	}
+// 	return fallback
+// }

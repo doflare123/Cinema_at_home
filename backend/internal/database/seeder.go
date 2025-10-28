@@ -1,7 +1,9 @@
 package database
 
 import (
+	"cinema/config"
 	"cinema/internal/models"
+	"encoding/json"
 	"sync"
 
 	"gorm.io/gorm"
@@ -13,6 +15,7 @@ func Seeder(db *gorm.DB) []error {
 
 	seeders := []func(*gorm.DB) error{
 		roleSeed,
+		genreSeed,
 	}
 
 	var wg sync.WaitGroup
@@ -52,5 +55,50 @@ func roleSeed(db *gorm.DB) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func genreSeed(db *gorm.DB) error {
+	data, err := config.GetJSONFile("genres.json")
+	if err != nil {
+		return err
+	}
+
+	var genres []string
+	if err := json.Unmarshal(data, &genres); err != nil {
+		return err
+	}
+
+	// Загружаем все существующие жанры
+	var existing []models.Genre
+	if err := db.Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingMap := make(map[string]bool)
+	for _, g := range existing {
+		existingMap[g.Name] = true
+	}
+
+	jsonMap := make(map[string]bool)
+	for _, name := range genres {
+		jsonMap[name] = true
+		// Добавляем новые жанры
+		if !existingMap[name] {
+			if err := db.Create(&models.Genre{Name: name}).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	// Удаляем жанры, которых нет в JSON
+	for _, g := range existing {
+		if !jsonMap[g.Name] {
+			if err := db.Delete(&g).Error; err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
