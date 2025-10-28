@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"sync"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-func Seeder(db *gorm.DB) []error {
+func Seeder(db Repository) []error {
 	var errs []error
 
-	seeders := []func(*gorm.DB) error{
+	seeders := []func(Repository) error{
 		roleSeed,
 		genreSeed,
 	}
@@ -23,7 +22,7 @@ func Seeder(db *gorm.DB) []error {
 
 	for _, seed := range seeders {
 		wg.Add(1)
-		go func(seed func(*gorm.DB) error) {
+		go func(seed func(Repository) error) {
 			defer wg.Done()
 			if err := seed(db); err != nil {
 				errCh <- err
@@ -44,7 +43,7 @@ func Seeder(db *gorm.DB) []error {
 	return nil
 }
 
-func roleSeed(db *gorm.DB) error {
+func roleSeed(db Repository) error {
 	roles := []models.Role{
 		{Name: "user"},
 		{Name: "admin"},
@@ -58,7 +57,7 @@ func roleSeed(db *gorm.DB) error {
 	return nil
 }
 
-func genreSeed(db *gorm.DB) error {
+func genreSeed(db Repository) error {
 	data, err := config.GetJSONFile("genres.json")
 	if err != nil {
 		return err

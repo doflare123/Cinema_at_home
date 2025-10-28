@@ -10,24 +10,26 @@ import (
 
 type Server struct {
 	engine *gin.Engine
-	cont   *container.Container
+	cont   container.Container
 }
 
-func initServer(cont *container.Container) (*Server, error) {
-	if cont.Config.AppEnv == "dev" {
+func initServer(cont container.Container) (*Server, error) {
+	db := cont.GetRepository()
+	logger := cont.GetLogger()
+	if cont.GetConfig().AppEnv == "dev" {
 		gin.SetMode(gin.DebugMode)
-		if err := database.AutoMigDB(cont.DB, &models.User{}, &models.Role{}); err != nil {
-			cont.Logger.Error("Error with auto migration: %s", err)
+		if err := database.AutoMigDB(db, &models.User{}, &models.Role{}); err != nil {
+			logger.Error("Error with auto migration: %s", err)
 		}
 	} else {
 		gin.SetMode(gin.ReleaseMode)
-		if err := database.MigrationDB(cont.DB, cont.Logger); err != nil {
-			cont.Logger.Error("Error with migrations: %s", err)
+		if err := database.MigrationDB(db, logger); err != nil {
+			logger.Error("Error with migrations: %s", err)
 		}
 	}
-	err := database.Seeder(cont.DB)
+	err := database.Seeder(db)
 	if err != nil {
-		cont.Logger.Error("Error with seeder", "error", err)
+		logger.Error("Error with seeder", "error", err)
 	}
 
 	r := gin.Default()
@@ -41,6 +43,6 @@ func initServer(cont *container.Container) (*Server, error) {
 }
 
 func (s *Server) run() error {
-	s.cont.Logger.Info("Server started")
-	return s.engine.Run(s.cont.Config.ServerPort)
+	s.cont.GetLogger().Info("Server started")
+	return s.engine.Run(s.cont.GetConfig().ServerPort)
 }

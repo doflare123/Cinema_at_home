@@ -1,37 +1,35 @@
 package handlers
 
 import (
-	"cinema/internal/app/repository"
 	"cinema/internal/app/services"
 	"cinema/internal/app/utils"
+	"cinema/internal/container"
+	"cinema/internal/models/dto"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type RegisterHandler struct {
-	AuthServices *services.RegisterServices
+type UserHandler interface {
+	Register(c *gin.Context)
+	Login(c *gin.Context)
 }
 
-type AuthHandler struct {
-	AuthServices *services.AuthServices
+type userHandler struct {
+	container container.Container
+	service   services.UserServices
 }
 
-func NewAuthHandler(authServices *services.AuthServices) *AuthHandler {
-	return &AuthHandler{
-		AuthServices: authServices,
+func NewAuthHandler(container container.Container) UserHandler {
+	return &userHandler{
+		container: container,
+		service:   services.NewUserServices(container),
 	}
 }
 
-func NewRegisterHandler(authServices *services.RegisterServices) *RegisterHandler {
-	return &RegisterHandler{
-		AuthServices: authServices,
-	}
-}
-
-func (h *RegisterHandler) Register(c *gin.Context) {
-	var request repository.RegisterRequest
+func (h *userHandler) Register(c *gin.Context) {
+	var request dto.RegisterRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		if utils.HandleValidationError(c, err) {
 			return
@@ -40,7 +38,7 @@ func (h *RegisterHandler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.AuthServices.Register(request.Username, request.Password); err != nil {
+	if err := h.service.Register(request.Username, request.Password); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -48,8 +46,8 @@ func (h *RegisterHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var request repository.LoginRequest
+func (h *userHandler) Login(c *gin.Context) {
+	var request dto.LoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		if utils.HandleValidationError(c, err) {
 			return
@@ -57,7 +55,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	token, err := h.AuthServices.Login(request.Username, request.Password)
+	token, err := h.service.Login(request.Username, request.Password)
 	if err != nil {
 		fmt.Print(err)
 		if utils.HandleValidationError(c, err) {

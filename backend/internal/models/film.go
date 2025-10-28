@@ -1,15 +1,15 @@
 package models
 
 type Film struct {
-	ID               uint    `gorm:"primaryKey" json:"id"`
-	Title            string  `gorm:"not null" json:"title"`
-	Description      string  `gorm:"not null" json:"description"`
-	ShortDescription string  `gorm:"not null" json:"short_description"`
-	Duration         string  `gorm:"not null" json:"duration"`
-	ReleaseDate      string  `gorm:"not null" json:"release_date"`
-	Country          string  `gorm:"not null" json:"country"`
-	Poster           string  `gorm:"not null" json:"image"`
-	RatinKp          float64 `gorm:"not null" json:"ratin"`
+	ID               uint    `gorm:"primaryKey"`
+	Title            string  `gorm:"not null"`
+	Description      string  `gorm:"not null"`
+	ShortDescription string  `gorm:"not null"`
+	Duration         int32   `gorm:"not null"`
+	ReleaseDate      string  `gorm:"not null"`
+	Country          string  `gorm:"not null"`
+	Poster           string  `gorm:"not null"`
+	RatinKp          float64 `gorm:"not null"`
 }
 
 type FilmGenre struct {

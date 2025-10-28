@@ -6,23 +6,21 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-
-	"gorm.io/gorm"
 )
 
-func AutoMigDB(db *gorm.DB, models ...interface{}) error {
-	if err := db.AutoMigrate(models...); err != nil {
+func AutoMigDB(db Repository, models ...interface{}) error {
+	if err := db.AutoMigrate(models); err != nil {
 		return err
 	}
 	return nil
 }
 
-func MigrationDB(db *gorm.DB, logger logger.Logger) error {
-	sqlDB, err := db.DB()
-	migrationsPath := "file://D:/Приколюхи/Cinema_at_home/backend/migrations"
+func MigrationDB(db Repository, logger logger.Logger) error {
+	sqlDB, err := db.GetSQLDB()
 	if err != nil {
-		logger.Error("Error init migrations: %s", err)
+		return err
 	}
+	migrationsPath := "file://D:/Приколюхи/Cinema_at_home/backend/migrations"
 	driver, err := migratepg.WithInstance(sqlDB, &migratepg.Config{})
 	if err != nil {
 		return err

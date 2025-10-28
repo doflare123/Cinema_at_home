@@ -41,10 +41,3 @@ func NewConfig() *Config {
 func GetJSONFile(filename string) ([]byte, error) {
 	return JSONFiles.ReadFile(filename)
 }
-
-// func getEnv(key, fallback string) string {
-// 	if v := os.Getenv(key); v != "" {
-// 		return v
-// 	}
-// 	return fallback
-// }

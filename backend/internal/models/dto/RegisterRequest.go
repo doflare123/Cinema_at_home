@@ -1,4 +1,4 @@
-package repository
+package dto
 
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required"`
