@@ -3,16 +3,17 @@ package database
 import (
 	"cinema/config"
 	"cinema/internal/models"
+	"cinema/internal/repository"
 	"encoding/json"
 	"sync"
 
 	"gorm.io/gorm/clause"
 )
 
-func Seeder(db Repository) []error {
+func Seeder(db repository.Repository) []error {
 	var errs []error
 
-	seeders := []func(Repository) error{
+	seeders := []func(repository.Repository) error{
 		roleSeed,
 		genreSeed,
 	}
@@ -22,7 +23,7 @@ func Seeder(db Repository) []error {
 
 	for _, seed := range seeders {
 		wg.Add(1)
-		go func(seed func(Repository) error) {
+		go func(seed func(repository.Repository) error) {
 			defer wg.Done()
 			if err := seed(db); err != nil {
 				errCh <- err
@@ -43,7 +44,7 @@ func Seeder(db Repository) []error {
 	return nil
 }
 
-func roleSeed(db Repository) error {
+func roleSeed(db repository.Repository) error {
 	roles := []models.Role{
 		{Name: "user"},
 		{Name: "admin"},
@@ -57,7 +58,7 @@ func roleSeed(db Repository) error {
 	return nil
 }
 
-func genreSeed(db Repository) error {
+func genreSeed(db repository.Repository) error {
 	data, err := config.GetJSONFile("genres.json")
 	if err != nil {
 		return err

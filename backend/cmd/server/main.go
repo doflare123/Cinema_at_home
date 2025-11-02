@@ -4,8 +4,8 @@ import (
 	"cinema/config"
 	"cinema/internal/app/utils"
 	"cinema/internal/container"
-	"cinema/internal/database"
 	"cinema/internal/logger"
+	"cinema/internal/repository"
 	"log"
 )
 
@@ -18,7 +18,7 @@ func main() {
 	}
 	logger.Info("Logger initialized")
 
-	rep := database.NewFilmRepository(logger, *conf)
+	rep := repository.NewFilmRepository(logger, *conf)
 	container, err := container.NewContainer(rep, logger, *conf)
 	if err != nil {
 		panic(err)

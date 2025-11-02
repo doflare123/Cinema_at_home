@@ -4,6 +4,7 @@ import (
 	"cinema/internal/app/services"
 	"cinema/internal/app/utils"
 	"cinema/internal/container"
+	appErrors "cinema/internal/errors"
 	"cinema/internal/models/dto"
 	"fmt"
 	"net/http"
@@ -11,24 +12,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler interface {
+type AuthHandler interface {
 	Register(c *gin.Context)
 	Login(c *gin.Context)
 }
 
-type userHandler struct {
+type authHandler struct {
 	container container.Container
-	service   services.UserServices
+	service   services.AuthServices
 }
 
-func NewAuthHandler(container container.Container) UserHandler {
-	return &userHandler{
+func NewAuthHandler(container container.Container) AuthHandler {
+	return &authHandler{
 		container: container,
-		service:   services.NewUserServices(container),
+		service:   services.NewAuthServices(container),
 	}
 }
 
-func (h *userHandler) Register(c *gin.Context) {
+func (h *authHandler) Register(c *gin.Context) {
 	var request dto.RegisterRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		if utils.HandleValidationError(c, err) {
@@ -39,6 +40,10 @@ func (h *userHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.service.Register(request.Username, request.Password); err != nil {
+		if err == appErrors.ErrUserNameAlreadyExist {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -46,7 +51,7 @@ func (h *userHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
-func (h *userHandler) Login(c *gin.Context) {
+func (h *authHandler) Login(c *gin.Context) {
 	var request dto.LoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		if utils.HandleValidationError(c, err) {

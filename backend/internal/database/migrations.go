@@ -2,20 +2,21 @@ package database
 
 import (
 	"cinema/internal/logger"
+	"cinema/internal/repository"
 
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func AutoMigDB(db Repository, models ...interface{}) error {
+func AutoMigDB(db repository.Repository, models ...interface{}) error {
 	if err := db.AutoMigrate(models); err != nil {
 		return err
 	}
 	return nil
 }
 
-func MigrationDB(db Repository, logger logger.Logger) error {
+func MigrationDB(db repository.Repository, logger logger.Logger) error {
 	sqlDB, err := db.GetSQLDB()
 	if err != nil {
 		return err

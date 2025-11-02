@@ -1,9 +1,11 @@
 package services
 
 import (
+	"cinema/config"
 	"cinema/internal/app/utils"
 	"cinema/internal/container"
 	appErrors "cinema/internal/errors"
+	"cinema/internal/logger"
 	"cinema/internal/models"
 	"cinema/internal/models/dto"
 	"time"
@@ -12,35 +14,35 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserServices interface {
+type AuthServices interface {
 	Register(username, password string) error
 	Login(username, password string) (dto.TokenPair, error)
 }
 
-type userServices struct {
+type authServices struct {
 	container container.Container
 }
 
-func NewUserServices(container container.Container) UserServices {
-	return &userServices{
+func NewAuthServices(container container.Container) AuthServices {
+	return &authServices{
 		container: container,
 	}
 }
 
-func (s *userServices) Register(username, password string) error {
+func (s *authServices) Register(username, password string) error {
 	var user models.User
-	if err := s.container.GetRepository().Where("username = ?", username).First(&user).Error; err != nil {
-		switch err {
-		case gorm.ErrRecordNotFound:
-			break
-		default:
-			s.container.GetLogger().Error("Error searching user: %s", err)
-			return appErrors.ErrUserNameAlreadyExist
-		}
+	err := user.NameAlreadyExist(s.container.GetRepository(), username)
+	if err == nil {
+		s.container.GetLogger().Info("User already exist", "username", username)
+		return appErrors.ErrUserNameAlreadyExist
 	}
+	if err != gorm.ErrRecordNotFound {
+		return appErrors.ErrInvalidServer
+	}
+
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
-		s.container.GetLogger().Error("Error hashing password: %s", err)
+		s.container.GetLogger().Error("Error hashing password", "error", err.Error())
 		return appErrors.ErrInvalidServer
 	}
 	user = models.User{
@@ -49,30 +51,37 @@ func (s *userServices) Register(username, password string) error {
 		RoleID:   1,
 	}
 
-	err = s.container.GetRepository().Create(&user).Error
+	err = user.Create(s.container.GetRepository())
 	if err != nil {
-		s.container.GetLogger().Error("Error creating user: %s", err)
+		switch err {
+		case gorm.ErrRecordNotFound:
+			break
+		case appErrors.ErrUserNameAlreadyExist:
+			s.container.GetLogger().Error("Error searching user", "error", err.Error())
+			return err
+		}
+		s.container.GetLogger().Error("Error creating user", "error", err.Error())
 		return appErrors.ErrInvalidServer
 	}
 	return nil
 }
 
-func (s *userServices) Login(username, password string) (tokenPair dto.TokenPair, err error) {
-	var user models.User
-	if err = s.container.GetRepository().Where("username = ?", username).First(&user).Error; err != nil {
+func (s *authServices) Login(username, password string) (tokenPair dto.TokenPair, err error) {
+	user, err := new(models.User).FindByName(s.container.GetRepository(), username)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			s.container.GetLogger().Info("User not found", err)
+			s.container.GetLogger().Info("User not found", err.Error())
 			return tokenPair, appErrors.ErrUserNotFound
 		}
-		s.container.GetLogger().Error("Error searching user", err)
+		s.container.GetLogger().Error("Error searching user", err.Error())
 		return tokenPair, appErrors.ErrInvalidServer
 	}
 	if !utils.VerifyPassword(user.Password, password) {
 		return tokenPair, appErrors.ErrInvalidPassword
 	}
-	tokenPair, err = s.createTokens(&user)
+	tokenPair, err = createTokens(s.container.GetLogger(), *s.container.GetConfig(), user)
 	if err != nil {
-		s.container.GetLogger().Error("Error creating JWT", err)
+		s.container.GetLogger().Error("Error creating JWT", err.Error())
 		return tokenPair, appErrors.ErrProblemWithCreateJWT
 	}
 
@@ -81,7 +90,8 @@ func (s *userServices) Login(username, password string) (tokenPair dto.TokenPair
 
 // ВСПОМОГАТЕЛЬНОЕ
 
-func (s *userServices) createTokens(user *models.User) (tokenPair dto.TokenPair, err error) {
+func createTokens(logger logger.Logger, config config.Config, user *models.User) (tokenPair dto.TokenPair, err error) {
+	secret := config.JWTSecretKey
 	accessClaims := jwt.MapClaims{
 		"user_id":  user.ID,
 		"username": user.Username,
@@ -92,9 +102,9 @@ func (s *userServices) createTokens(user *models.User) (tokenPair dto.TokenPair,
 	}
 
 	access := jwt.NewWithClaims(jwt.SigningMethodHS512, accessClaims)
-	tokenPair.AccessToken, err = access.SignedString([]byte(s.container.GetConfig().JWTSecretKey))
+	tokenPair.AccessToken, err = access.SignedString([]byte(secret))
 	if err != nil {
-		s.container.GetLogger().Error("Error creating JWT access", err)
+		logger.Error("Error creating JWT access", err)
 		return tokenPair, err
 	}
 
@@ -106,9 +116,9 @@ func (s *userServices) createTokens(user *models.User) (tokenPair dto.TokenPair,
 	}
 
 	refresh := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshClaims)
-	tokenPair.RefreshToken, err = refresh.SignedString([]byte(s.container.GetConfig().JWTSecretKey))
+	tokenPair.RefreshToken, err = refresh.SignedString([]byte(secret))
 	if err != nil {
-		s.container.GetLogger().Error("Error creating JWT refresh", err)
+		logger.Error("Error creating JWT refresh", err)
 		return tokenPair, err
 	}
 
