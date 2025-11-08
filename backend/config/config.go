@@ -21,6 +21,7 @@ type Config struct {
 	DBDsn        string
 	JWTSecretKey string
 	LogLevel     string
+	ApiKey       string
 }
 
 func NewConfig() *Config {
@@ -35,6 +36,7 @@ func NewConfig() *Config {
 		DBDsn:        os.Getenv("DSN"),
 		JWTSecretKey: os.Getenv("JWT_SECRET_KEY"),
 		LogLevel:     os.Getenv("LOG_LEVEL"),
+		ApiKey:       os.Getenv("API_KEY"),
 	}
 }
 
