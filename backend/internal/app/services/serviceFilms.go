@@ -4,6 +4,7 @@ import (
 	"cinema/internal/api"
 	"cinema/internal/logger"
 	"cinema/internal/models"
+	"cinema/internal/models/dto"
 	"cinema/internal/repository"
 	"fmt"
 	"strings"
@@ -80,4 +81,9 @@ func (s *filmService) Create(title string) error {
 
 		return nil
 	})
+}
+
+func (s *filmService) GetFilmsOnVoteSelection() (dto.Film, error) {
+
+	return dto.Film{}, nil
 }

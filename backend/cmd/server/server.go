@@ -18,7 +18,7 @@ func initServer(cont container.Container) (*Server, error) {
 	logger := cont.GetLogger()
 	if cont.GetConfig().AppEnv == "dev" {
 		gin.SetMode(gin.DebugMode)
-		if err := database.AutoMigDB(db, &models.User{}, &models.Role{}); err != nil {
+		if err := database.AutoMigDB(db, &models.User{}, &models.Role{}, &models.Film{}, &models.Genre{}, &models.FilmGenre{}); err != nil {
 			logger.Error("Error with auto migration: %s", err)
 		}
 	} else {

@@ -9,6 +9,7 @@ import (
 )
 
 type UserServices interface {
+	UpdateInf(userID uint, username, password, displayName, avatarURL string) (dto.TokenPair, error)
 }
 
 type userServices struct {
@@ -16,13 +17,11 @@ type userServices struct {
 }
 
 func NewUserService(container container.Container) UserServices {
-	return &userServices{
-		container: container,
-	}
+	return &userServices{container: container}
 }
 
-func (u *userServices) UpdateInf(oldName, username, password string) (tokenPair dto.TokenPair, err error) {
-	user, err := new(models.User).FindByName(u.container.GetRepository(), oldName)
+func (u *userServices) UpdateInf(userID uint, username, password, displayName, avatarURL string) (tokenPair dto.TokenPair, err error) {
+	user, err := new(models.User).FindByID(u.container.GetRepository(), int(userID))
 	if err != nil {
 		return tokenPair, err
 	}
@@ -31,9 +30,17 @@ func (u *userServices) UpdateInf(oldName, username, password string) (tokenPair 
 	if username != "" {
 		updates["username"] = username
 	}
-
+	if displayName != "" {
+		updates["display_name"] = displayName
+	}
+	if avatarURL != "" {
+		updates["avatar_url"] = avatarURL
+	}
 	if password != "" {
-		hashed, _ := utils.HashPassword(password)
+		hashed, hashErr := utils.HashPassword(password)
+		if hashErr != nil {
+			return tokenPair, appErrors.ErrInvalidServer
+		}
 		updates["password"] = hashed
 	}
 
@@ -43,8 +50,11 @@ func (u *userServices) UpdateInf(oldName, username, password string) (tokenPair 
 
 	err = user.Update(u.container.GetRepository(), updates)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return tokenPair, appErrors.ErrUserNameAlreadyExist
+		}
 		return tokenPair, err
 	}
 	tokenPair, err = createTokens(u.container.GetLogger(), *u.container.GetConfig(), user)
-	return tokenPair, nil
+	return tokenPair, err
 }

@@ -46,7 +46,7 @@ func Seeder(db repository.Repository) []error {
 
 func roleSeed(db repository.Repository) error {
 	roles := []models.Role{
-		{Name: "user"},
+		{Name: "member"},
 		{Name: "admin"},
 	}
 	for _, r := range roles {
@@ -69,7 +69,6 @@ func genreSeed(db repository.Repository) error {
 		return err
 	}
 
-	// Загружаем все существующие жанры
 	var existing []models.Genre
 	if err := db.Find(&existing).Error; err != nil {
 		return err
@@ -80,21 +79,9 @@ func genreSeed(db repository.Repository) error {
 		existingMap[g.Name] = true
 	}
 
-	jsonMap := make(map[string]bool)
 	for _, name := range genres {
-		jsonMap[name] = true
-		// Добавляем новые жанры
 		if !existingMap[name] {
 			if err := db.Create(&models.Genre{Name: name}).Error; err != nil {
-				return err
-			}
-		}
-	}
-
-	// Удаляем жанры, которых нет в JSON
-	for _, g := range existing {
-		if !jsonMap[g.Name] {
-			if err := db.Delete(&g).Error; err != nil {
 				return err
 			}
 		}

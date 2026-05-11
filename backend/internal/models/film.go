@@ -36,13 +36,6 @@ func (f *Film) NameAlreadyExist(rep repository.Repository, name string) error {
 	return nil
 }
 
-func (g *Genre) NameAlreadyExist(rep repository.Repository, name string) error {
-	if err := rep.Where("name = ?", name).First(g).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
 func (f *Film) FindByName(rep repository.Repository, nameFilm string) (*Film, error) {
 	if err := rep.Where("Title = ?", nameFilm).First(f).Error; err != nil {
 		return nil, appErrors.ErrFilmNotFound
@@ -52,7 +45,14 @@ func (f *Film) FindByName(rep repository.Repository, nameFilm string) (*Film, er
 
 func (f *Film) Create(rep repository.Repository) error {
 	if err := rep.Create(f).Error; err != nil {
-		return err // бывший ErrInvalidServer
+		return err
+	}
+	return nil
+}
+
+func (f *Film) Delete(rep repository.Repository) error {
+	if err := rep.Delete(f).Error; err != nil {
+		return appErrors.ErrInvalidPassword
 	}
 	return nil
 }
@@ -64,9 +64,9 @@ func (g *Genre) Create(rep repository.Repository) error {
 	return nil
 }
 
-func (f *Film) Delete(rep repository.Repository) error {
-	if err := rep.Delete(f).Error; err != nil {
-		return appErrors.ErrInvalidPassword
+func (g *Genre) NameAlreadyExist(rep repository.Repository, name string) error {
+	if err := rep.Where("name = ?", name).First(g).Error; err != nil {
+		return err
 	}
 	return nil
 }

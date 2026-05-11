@@ -16,27 +16,29 @@ var (
 )
 
 type Config struct {
-	AppEnv       string
-	ServerPort   string
-	DBDsn        string
-	JWTSecretKey string
-	LogLevel     string
-	ApiKey       string
+	AppEnv           string
+	ServerPort       string
+	DBDsn            string
+	JWTSecretKey     string
+	TelegramBotToken string
+	LogLevel         string
+	ApiKey           string
 }
 
 func NewConfig() *Config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️  .env файл не найден, использую системные переменные")
+		log.Println(".env file not found, using system environment variables")
 	}
 	fmt.Print(JSONFiles)
 
 	return &Config{
-		AppEnv:       os.Getenv("APP_ENV"),
-		ServerPort:   os.Getenv("PORT"),
-		DBDsn:        os.Getenv("DSN"),
-		JWTSecretKey: os.Getenv("JWT_SECRET_KEY"),
-		LogLevel:     os.Getenv("LOG_LEVEL"),
-		ApiKey:       os.Getenv("API_KEY"),
+		AppEnv:           os.Getenv("APP_ENV"),
+		ServerPort:       os.Getenv("PORT"),
+		DBDsn:            os.Getenv("DSN"),
+		JWTSecretKey:     os.Getenv("JWT_SECRET_KEY"),
+		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
+		LogLevel:         os.Getenv("LOG_LEVEL"),
+		ApiKey:           os.Getenv("API_KEY"),
 	}
 }
 

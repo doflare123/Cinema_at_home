@@ -3,6 +3,9 @@ package database
 import (
 	"cinema/internal/logger"
 	"cinema/internal/repository"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -10,8 +13,10 @@ import (
 )
 
 func AutoMigDB(db repository.Repository, models ...interface{}) error {
-	if err := db.AutoMigrate(models); err != nil {
-		return err
+	for _, model := range models {
+		if err := db.AutoMigrate(model); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -21,7 +26,12 @@ func MigrationDB(db repository.Repository, logger logger.Logger) error {
 	if err != nil {
 		return err
 	}
-	migrationsPath := "file://D:/Приколюхи/Cinema_at_home/backend/migrations"
+
+	migrationsPath, err := resolveMigrationsPath()
+	if err != nil {
+		return err
+	}
+
 	driver, err := migratepg.WithInstance(sqlDB, &migratepg.Config{})
 	if err != nil {
 		return err
@@ -39,4 +49,21 @@ func MigrationDB(db repository.Repository, logger logger.Logger) error {
 	}
 	logger.Info("Migrations done")
 	return nil
+}
+
+func resolveMigrationsPath() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	candidates := []string{
+		filepath.Join(wd, "migrations"),
+		filepath.Join(wd, "backend", "migrations"),
+	}
+	for _, candidate := range candidates {
+		if _, statErr := os.Stat(candidate); statErr == nil {
+			return "file://" + filepath.ToSlash(candidate), nil
+		}
+	}
+	return "", fmt.Errorf("migrations directory not found from working dir: %s", wd)
 }
