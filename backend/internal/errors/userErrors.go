@@ -4,4 +4,5 @@ import "errors"
 
 var (
 	ErrNotEnougthData = errors.New("Not enough data")
+	ErrInvalidStatus  = errors.New("invalid status")
 )

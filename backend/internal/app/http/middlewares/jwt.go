@@ -1,6 +1,8 @@
 package middlewares
 
 import (
+	"cinema/internal/models"
+	"cinema/internal/repository"
 	"net/http"
 	"strings"
 	"time"
@@ -9,7 +11,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func JWTAuthMiddleware(secretKey string) gin.HandlerFunc {
+func JWTAuthMiddleware(secretKey string, reps ...repository.Repository) gin.HandlerFunc {
+	var rep repository.Repository
+	if len(reps) > 0 {
+		rep = reps[0]
+	}
+
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -61,15 +68,31 @@ func JWTAuthMiddleware(secretKey string) gin.HandlerFunc {
 
 		status, _ := claims["status"].(string)
 		username, _ := claims["username"].(string)
+		roleName := ""
 		tokenType, _ := claims["type"].(string)
 		if tokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access token required"})
 			return
 		}
 
+		if rep != nil {
+			user, err := new(models.User).FindByID(rep, int(userID))
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token user"})
+				return
+			}
+			status = user.Status
+			roleID = user.RoleID
+			var role models.Role
+			if err := rep.First(&role, user.RoleID).Error; err == nil {
+				roleName = role.Name
+			}
+		}
+
 		c.Set("user_id", userID)
 		c.Set("username", username)
 		c.Set("role_id", roleID)
+		c.Set("role_name", roleName)
 		c.Set("status", status)
 
 		c.Next()
@@ -104,6 +127,33 @@ func RequireRoles(allowedRoleIDs ...uint) gin.HandlerFunc {
 			return
 		}
 		if _, ok := allowed[roleID]; !ok {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireRoleNames(allowedRoleNames ...string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(allowedRoleNames))
+	for _, name := range allowedRoleNames {
+		normalized := strings.ToLower(strings.TrimSpace(name))
+		if normalized != "" {
+			allowed[normalized] = struct{}{}
+		}
+	}
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role_name")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "missing role"})
+			return
+		}
+		roleName, ok := roleVal.(string)
+		if !ok || strings.TrimSpace(roleName) == "" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "invalid role"})
+			return
+		}
+		if _, ok := allowed[strings.ToLower(strings.TrimSpace(roleName))]; !ok {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}

@@ -2,16 +2,22 @@ package services
 
 import (
 	"cinema/internal/api"
+	appErrors "cinema/internal/errors"
 	"cinema/internal/logger"
 	"cinema/internal/models"
 	"cinema/internal/models/dto"
 	"cinema/internal/repository"
+	"errors"
 	"fmt"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 type FilmService interface {
 	Create(title string) error
+	List() ([]dto.FilmView, error)
+	GetByID(id uint) (dto.FilmView, error)
 }
 
 type filmService struct {
@@ -86,4 +92,40 @@ func (s *filmService) Create(title string) error {
 func (s *filmService) GetFilmsOnVoteSelection() (dto.Film, error) {
 
 	return dto.Film{}, nil
+}
+
+func (s *filmService) List() ([]dto.FilmView, error) {
+	var films []models.Film
+	if err := s.rep.Model(&models.Film{}).Order("title ASC").Find(&films).Error; err != nil {
+		return nil, err
+	}
+
+	items := make([]dto.FilmView, 0, len(films))
+	for _, film := range films {
+		items = append(items, mapFilmView(film))
+	}
+
+	return items, nil
+}
+
+func (s *filmService) GetByID(id uint) (dto.FilmView, error) {
+	var film models.Film
+	if err := s.rep.First(&film, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return dto.FilmView{}, appErrors.ErrFilmNotFound
+		}
+		return dto.FilmView{}, err
+	}
+
+	return mapFilmView(film), nil
+}
+
+func mapFilmView(film models.Film) dto.FilmView {
+	return dto.FilmView{
+		ID:          film.ID,
+		Title:       film.Title,
+		Description: film.Description,
+		Poster:      film.Poster,
+		ReleaseDate: film.ReleaseDate,
+	}
 }

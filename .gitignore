@@ -1,2 +1,5 @@
 .env
 backend/logs/app.log
+/backend/.cache
+/backend/.cache-review
+/backend/.cache_go

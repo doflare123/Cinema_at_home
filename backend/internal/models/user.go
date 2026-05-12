@@ -3,6 +3,7 @@ package models
 import (
 	appErrors "cinema/internal/errors"
 	"cinema/internal/repository"
+	"strings"
 )
 
 type User struct {
@@ -49,6 +50,18 @@ func (u *User) FindByID(rep repository.Repository, id int) (*User, error) {
 		return nil, appErrors.ErrUserNotFound
 	}
 	return u, nil
+}
+
+func (u *User) ListByStatus(rep repository.Repository, status string) ([]User, error) {
+	var users []User
+	q := rep.Model(&User{})
+	if strings.TrimSpace(status) != "" {
+		q = q.Where("status = ?", status)
+	}
+	if err := q.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 func (u *User) Create(rep repository.Repository) error {

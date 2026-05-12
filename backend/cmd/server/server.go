@@ -18,7 +18,20 @@ func initServer(cont container.Container) (*Server, error) {
 	logger := cont.GetLogger()
 	if cont.GetConfig().AppEnv == "dev" {
 		gin.SetMode(gin.DebugMode)
-		if err := database.AutoMigDB(db, &models.User{}, &models.Role{}, &models.Film{}, &models.Genre{}, &models.FilmGenre{}); err != nil {
+		if err := database.AutoMigDB(
+			db,
+			&models.User{},
+			&models.Role{},
+			&models.Film{},
+			&models.Genre{},
+			&models.FilmGenre{},
+			&models.Franchise{},
+			&models.FranchiseMovie{},
+			&models.ExpectationVote{},
+			&models.WeeklyPack{},
+			&models.WeeklyPackMovie{},
+			&models.WeeklyPackVote{},
+		); err != nil {
 			logger.Error("Error with auto migration: %s", err)
 		}
 	} else {
@@ -30,6 +43,11 @@ func initServer(cont container.Container) (*Server, error) {
 	err := database.Seeder(db)
 	if err != nil {
 		logger.Error("Error with seeder", "error", err)
+	}
+	if cont.GetConfig().AppEnv == "dev" {
+		if err := database.DemoCatalogSeed(db); err != nil {
+			logger.Error("Error with demo catalog seeder", "error", err)
+		}
 	}
 
 	r := gin.Default()

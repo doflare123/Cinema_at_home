@@ -8,12 +8,24 @@ import (
 
 func (s *Server) InitRouters() {
 	authHandler := handlers.NewAuthHandler(s.cont)
-	routers.RegisterAuthRoutes(s.engine, authHandler)
+	routers.RegisterAuthRoutes(s.engine, authHandler, s.cont.GetRepository())
 
 	userHandler := handlers.NewUserHandler(s.cont)
-	routers.RegisterUserRoutes(s.engine, userHandler, s.cont.GetConfig().JWTSecretKey)
+	routers.RegisterUserRoutes(s.engine, userHandler, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 
 	filmSrv := services.NewFilmService(s.cont.GetLogger(), s.cont.GetRepository(), s.cont.GetConfig().ApiKey)
 	filmH := handlers.NewFilmHandler(filmSrv)
-	routers.RegisterFilmRoutes(s.engine, filmH, s.cont.GetConfig().JWTSecretKey)
+	routers.RegisterFilmRoutes(s.engine, filmH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	franchiseSrv := services.NewFranchiseService(s.cont.GetRepository())
+	franchiseH := handlers.NewFranchiseHandler(franchiseSrv)
+	routers.RegisterFranchiseRoutes(s.engine, franchiseH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	expectationSrv := services.NewExpectationService(s.cont.GetRepository())
+	expectationH := handlers.NewExpectationHandler(expectationSrv)
+	routers.RegisterExpectationRoutes(s.engine, expectationH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	weeklyPackSrv := services.NewWeeklyPackService(s.cont.GetRepository())
+	weeklyPackH := handlers.NewWeeklyPackHandler(weeklyPackSrv)
+	routers.RegisterWeeklyPackRoutes(s.engine, weeklyPackH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 }
