@@ -5,12 +5,7 @@ import (
 	"cinema/internal/models"
 	"cinema/internal/models/dto"
 	"errors"
-	"fmt"
 	"testing"
-	"time"
-
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func TestWeeklyPackServiceVoteLimits(t *testing.T) {
@@ -51,10 +46,7 @@ func TestWeeklyPackServiceStatusTransitionRequiresMovies(t *testing.T) {
 func newTestWeeklyPackService(t *testing.T) (WeeklyPackService, *testRepository, uint, uint, []uint) {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite db: %v", err)
-	}
+	db := openTestSQLiteDB(t)
 	rep := &testRepository{db: db}
 
 	for _, model := range []interface{}{

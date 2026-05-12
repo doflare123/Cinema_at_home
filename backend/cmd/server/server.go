@@ -28,6 +28,7 @@ func initServer(cont container.Container) (*Server, error) {
 			&models.Franchise{},
 			&models.FranchiseMovie{},
 			&models.ExpectationVote{},
+			&models.Review{},
 			&models.WeeklyPack{},
 			&models.WeeklyPackMovie{},
 			&models.WeeklyPackVote{},

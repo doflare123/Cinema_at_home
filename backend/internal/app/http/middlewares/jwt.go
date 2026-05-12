@@ -68,7 +68,7 @@ func JWTAuthMiddleware(secretKey string, reps ...repository.Repository) gin.Hand
 
 		status, _ := claims["status"].(string)
 		username, _ := claims["username"].(string)
-		roleName := ""
+		roleName, _ := claims["role_name"].(string)
 		tokenType, _ := claims["type"].(string)
 		if tokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access token required"})

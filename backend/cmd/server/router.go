@@ -25,6 +25,10 @@ func (s *Server) InitRouters() {
 	expectationH := handlers.NewExpectationHandler(expectationSrv)
 	routers.RegisterExpectationRoutes(s.engine, expectationH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 
+	reviewSrv := services.NewReviewService(s.cont.GetRepository())
+	reviewH := handlers.NewReviewHandler(reviewSrv)
+	routers.RegisterReviewRoutes(s.engine, reviewH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
 	weeklyPackSrv := services.NewWeeklyPackService(s.cont.GetRepository())
 	weeklyPackH := handlers.NewWeeklyPackHandler(weeklyPackSrv)
 	routers.RegisterWeeklyPackRoutes(s.engine, weeklyPackH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())

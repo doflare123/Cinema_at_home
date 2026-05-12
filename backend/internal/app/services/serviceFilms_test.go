@@ -4,12 +4,7 @@ import (
 	appErrors "cinema/internal/errors"
 	"cinema/internal/models"
 	"errors"
-	"fmt"
 	"testing"
-	"time"
-
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func TestFilmServiceListReturnsFrontendContract(t *testing.T) {
@@ -57,10 +52,7 @@ func TestFilmServiceGetByIDReturnsNotFound(t *testing.T) {
 func newTestFilmService(t *testing.T) (FilmService, *models.Film) {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite db: %v", err)
-	}
+	db := openTestSQLiteDB(t)
 
 	rep := &testRepository{db: db}
 	if err := rep.AutoMigrate(&models.Film{}); err != nil {

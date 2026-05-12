@@ -104,8 +104,12 @@ func signTestTokenWithRole(t *testing.T, secret string, userID, roleID uint, sta
 	t.Helper()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  float64(userID),
-		"role_id":  float64(roleID),
+		"user_id": float64(userID),
+		"role_id": float64(roleID),
+		"role_name": map[uint]string{
+			1: "member",
+			2: "admin",
+		}[roleID],
 		"username": "tester",
 		"status":   status,
 		"type":     tokenType,

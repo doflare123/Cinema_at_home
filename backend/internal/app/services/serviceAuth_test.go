@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+var testDBCounter uint64
 
 func TestVerifyTelegramAuthPayloadValid(t *testing.T) {
 	botToken := "bot-token"
@@ -206,10 +209,7 @@ func buildInitDataHash(values url.Values, botToken string) string {
 func newTestAuthService(t *testing.T) (AuthServices, repository.Repository, *models.User) {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite db: %v", err)
-	}
+	db := openTestSQLiteDB(t)
 
 	rep := &testRepository{db: db}
 	for _, model := range []interface{}{&models.Role{}, &models.User{}} {
@@ -232,6 +232,7 @@ func newTestAuthService(t *testing.T) (AuthServices, repository.Repository, *mod
 		RoleID:           1,
 		Status:           "active",
 	}
+	var err error
 	user.Password, err = utils.HashPassword("correct-password")
 	if err != nil {
 		t.Fatalf("failed to hash password: %v", err)
@@ -246,6 +247,18 @@ func newTestAuthService(t *testing.T) (AuthServices, repository.Repository, *mod
 	}
 
 	return NewAuthServices(cont), rep, user
+}
+
+func openTestSQLiteDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	id := atomic.AddUint64(&testDBCounter, 1)
+	name := fmt.Sprintf("test-%d-%d", time.Now().UnixNano(), id)
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=shared", name)), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	return db
 }
 
 type noopLogger struct{}

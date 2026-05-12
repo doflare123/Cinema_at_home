@@ -20,7 +20,7 @@ func RegisterWeeklyPackRoutes(r *gin.Engine, h handlers.WeeklyPackHandler, jwtSe
 	}
 
 	admin := r.Group("/admin/weekly-packs")
-	admin.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoles(2))
+	admin.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("admin"))
 	{
 		admin.POST("", h.Create)
 		admin.POST("/:id/movies", h.AddMovie)
