@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cinema/internal/api"
 	"cinema/internal/app/http/handlers"
 	"cinema/internal/app/http/routers"
 	"cinema/internal/app/services"
@@ -28,6 +29,14 @@ func (s *Server) InitRouters() {
 	reviewSrv := services.NewReviewService(s.cont.GetRepository())
 	reviewH := handlers.NewReviewHandler(reviewSrv)
 	routers.RegisterReviewRoutes(s.engine, reviewH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	proposalSrv := services.NewMovieProposalService(s.cont.GetRepository())
+	proposalH := handlers.NewMovieProposalHandler(proposalSrv)
+	routers.RegisterMovieProposalRoutes(s.engine, proposalH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	kinopoiskSrv := services.NewKinopoiskService(api.NewKinopoiskClient(s.cont.GetConfig().ApiKey))
+	kinopoiskH := handlers.NewKinopoiskHandler(kinopoiskSrv)
+	routers.RegisterKinopoiskRoutes(s.engine, kinopoiskH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 
 	weeklyPackSrv := services.NewWeeklyPackService(s.cont.GetRepository())
 	weeklyPackH := handlers.NewWeeklyPackHandler(weeklyPackSrv)

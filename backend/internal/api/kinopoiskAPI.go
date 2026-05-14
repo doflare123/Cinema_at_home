@@ -5,23 +5,36 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 )
 
-type filmResult struct {
-	Title            string
-	Description      string
-	ShortDescription string
-	Poster           string
-	RatingKp         float64
-	Year             int
-	Duration         int
-	Genres           []string
-	Countries        []string
+var defaultKinopoiskBaseURL = "https://api.poiskkino.dev/v1.4"
+
+type FilmResult struct {
+	SourceID         string   `json:"source_id"`
+	Title            string   `json:"title"`
+	Description      string   `json:"description"`
+	ShortDescription string   `json:"small_description"`
+	Poster           string   `json:"poster"`
+	RatingKp         float64  `json:"rating_kp"`
+	Year             int      `json:"release_date"`
+	Duration         int      `json:"duration"`
+	Genres           []string `json:"genres"`
+	Countries        []string `json:"countries"`
+}
+
+type KinopoiskClient struct {
+	APIKey     string
+	BaseURL    string
+	HTTPClient *http.Client
 }
 
 type apiResponse struct {
 	Docs []struct {
+		ID               int    `json:"id"`
 		Name             string `json:"name"`
+		AlternativeName  string `json:"alternativeName"`
 		Description      string `json:"description"`
 		ShortDescription string `json:"shortDescription"`
 		MovieLength      int    `json:"movieLength"`
@@ -41,57 +54,109 @@ type apiResponse struct {
 	} `json:"docs"`
 }
 
-func SearchFilm(name string, apikey string) (*filmResult, error) {
-	endpoint := "https://api.poiskkino.dev/v1.4/movie/search"
+func NewKinopoiskClient(apiKey string) *KinopoiskClient {
+	return &KinopoiskClient{
+		APIKey:  apiKey,
+		BaseURL: defaultKinopoiskBaseURL,
+		HTTPClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+func SearchFilm(name string, apiKey string) (*FilmResult, error) {
+	results, err := NewKinopoiskClient(apiKey).SearchFilms(name, 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, fmt.Errorf("film not found")
+	}
+	return &results[0], nil
+}
+
+func (c *KinopoiskClient) SearchFilms(query string, limit int) ([]FilmResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+	if limit <= 0 || limit > 20 {
+		limit = 10
+	}
+
+	baseURL := strings.TrimRight(c.BaseURL, "/")
+	endpoint := baseURL + "/movie/search"
 
 	params := url.Values{}
 	params.Set("page", "1")
-	params.Set("limit", "1")
-	params.Set("query", name)
+	params.Set("limit", fmt.Sprintf("%d", limit))
+	params.Set("query", query)
 
-	req, err := http.NewRequest("GET", endpoint+"?"+params.Encode(), nil)
+	req, err := http.NewRequest(http.MethodGet, endpoint+"?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("accept", "application/json")
-	req.Header.Set("X-API-KEY", apikey)
+	if strings.TrimSpace(c.APIKey) != "" {
+		req.Header.Set("X-API-KEY", c.APIKey)
+	}
 
-	client := &http.Client{}
-	res, err := client.Do(req)
+	httpClient := c.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	res, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("kinopoisk api returned status %d", res.StatusCode)
+	}
 
 	var apiRes apiResponse
 	if err := json.NewDecoder(res.Body).Decode(&apiRes); err != nil {
 		return nil, err
 	}
 
-	if len(apiRes.Docs) == 0 {
-		return nil, fmt.Errorf("film not found")
+	results := make([]FilmResult, 0, len(apiRes.Docs))
+	for _, doc := range apiRes.Docs {
+		title := strings.TrimSpace(doc.Name)
+		if title == "" {
+			title = strings.TrimSpace(doc.AlternativeName)
+		}
+		if title == "" {
+			continue
+		}
+
+		result := FilmResult{
+			SourceID:         fmt.Sprintf("%d", doc.ID),
+			Title:            title,
+			Description:      doc.Description,
+			ShortDescription: doc.ShortDescription,
+			Poster:           doc.Poster.URL,
+			RatingKp:         doc.Rating.Kp,
+			Year:             doc.Year,
+			Duration:         doc.MovieLength,
+		}
+
+		for _, g := range doc.Genres {
+			if name := strings.TrimSpace(g.Name); name != "" {
+				result.Genres = append(result.Genres, name)
+			}
+		}
+
+		for _, c := range doc.Countries {
+			if name := strings.TrimSpace(c.Name); name != "" {
+				result.Countries = append(result.Countries, name)
+			}
+		}
+
+		results = append(results, result)
 	}
 
-	doc := apiRes.Docs[0]
-
-	result := &filmResult{
-		Title:            doc.Name,
-		Description:      doc.Description,
-		ShortDescription: doc.ShortDescription,
-		Poster:           doc.Poster.URL,
-		RatingKp:         doc.Rating.Kp,
-		Year:             doc.Year,
-		Duration:         doc.MovieLength,
-	}
-
-	for _, g := range doc.Genres {
-		result.Genres = append(result.Genres, g.Name)
-	}
-
-	for _, c := range doc.Countries {
-		result.Countries = append(result.Countries, c.Name)
-	}
-
-	return result, nil
+	return results, nil
 }
