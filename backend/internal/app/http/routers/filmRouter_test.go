@@ -55,12 +55,63 @@ func TestRegisterFilmRoutesCreateStillRequiresAuth(t *testing.T) {
 	r := gin.New()
 	RegisterFilmRoutes(r, fakeFilmHandler{}, "test-secret", repository.Repository(nil))
 
-	req := httptest.NewRequest(http.MethodPost, "/film/", nil)
+	req := httptest.NewRequest(http.MethodPost, "/admin/movies", nil)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestRegisterFilmRoutesCreateRejectsMemberRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	r := gin.New()
+	RegisterFilmRoutes(r, fakeFilmHandler{}, "test-secret", repository.Repository(nil))
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/movies", nil)
+	req.Header.Set("Authorization", "Bearer "+signTestTokenWithRole(t, "test-secret", 1, 1, "active", "access"))
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestRegisterFilmRoutesCreateAllowsAdminRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	r := gin.New()
+	RegisterFilmRoutes(r, fakeFilmHandler{}, "test-secret", repository.Repository(nil))
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/movies", nil)
+	req.Header.Set("Authorization", "Bearer "+signTestTokenWithRole(t, "test-secret", 1, 2, "active", "access"))
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestRegisterFilmRoutesLegacyAliasStillWorksForAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	r := gin.New()
+	RegisterFilmRoutes(r, fakeFilmHandler{}, "test-secret", repository.Repository(nil))
+
+	req := httptest.NewRequest(http.MethodPost, "/film/", nil)
+	req.Header.Set("Authorization", "Bearer "+signTestTokenWithRole(t, "test-secret", 1, 2, "active", "access"))
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
 }

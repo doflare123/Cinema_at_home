@@ -65,9 +65,20 @@ func TestKinopoiskClientSearchFilmsReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := &KinopoiskClient{BaseURL: server.URL, HTTPClient: server.Client()}
+	client := &KinopoiskClient{APIKey: "test-key", BaseURL: server.URL, HTTPClient: server.Client()}
 	if _, err := client.SearchFilms("matrix", 1); err == nil {
 		t.Fatal("expected status error")
+	}
+}
+
+func TestKinopoiskClientSearchFilmsRejectsEmptyAPIKey(t *testing.T) {
+	client := &KinopoiskClient{
+		APIKey:     "",
+		BaseURL:    "http://example.com",
+		HTTPClient: http.DefaultClient,
+	}
+	if _, err := client.SearchFilms("matrix", 1); err == nil {
+		t.Fatal("expected empty api key error")
 	}
 }
 

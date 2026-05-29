@@ -12,9 +12,16 @@ func RegisterFilmRoutes(r *gin.Engine, filmH handlers.FilmHandler, jwtSecret str
 	r.GET("/movies", filmH.List)
 	r.GET("/movies/:id", filmH.GetByID)
 
-	films := r.Group("/film")
-	films.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoles(1, 2))
+	adminFilms := r.Group("/admin/movies")
+	adminFilms.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("admin"))
 	{
-		films.POST("/", filmH.CreateFilm)
+		adminFilms.POST("", filmH.CreateFilm)
+	}
+
+	// Legacy alias kept for backward compatibility.
+	legacyFilms := r.Group("/film")
+	legacyFilms.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("admin"))
+	{
+		legacyFilms.POST("/", filmH.CreateFilm)
 	}
 }

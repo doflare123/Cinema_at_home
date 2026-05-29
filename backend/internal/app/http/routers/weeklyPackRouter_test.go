@@ -48,3 +48,33 @@ func TestRegisterWeeklyPackRoutesVoteRequiresAuth(t *testing.T) {
 		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }
+
+func TestRegisterWeeklyPackRoutesVoteRejectsWrongRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	RegisterWeeklyPackRoutes(r, fakeWeeklyPackHandler{}, "secret")
+
+	req := httptest.NewRequest(http.MethodPost, "/weekly-packs/1/votes", nil)
+	req.Header.Set("Authorization", "Bearer "+signTestTokenWithRole(t, "secret", 1, 3, "active", "access"))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestRegisterWeeklyPackRoutesVoteAllowsMember(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	RegisterWeeklyPackRoutes(r, fakeWeeklyPackHandler{}, "secret")
+
+	req := httptest.NewRequest(http.MethodPost, "/weekly-packs/1/votes", nil)
+	req.Header.Set("Authorization", "Bearer "+signTestTokenWithRole(t, "secret", 1, 1, "active", "access"))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}

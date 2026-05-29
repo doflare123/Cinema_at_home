@@ -43,10 +43,12 @@ func (h *kinopoiskHandler) Search(c *gin.Context) {
 		switch {
 		case errors.Is(err, appErrors.ErrKinopoiskQueryRequired):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, appErrors.ErrKinopoiskNotConfigured):
+			c.JSON(http.StatusInternalServerError, gin.H{"error": appErrors.ErrKinopoiskNotConfigured.Error()})
 		case errors.Is(err, appErrors.ErrKinopoiskSearchFailed):
 			c.JSON(http.StatusBadGateway, gin.H{"error": appErrors.ErrKinopoiskSearchFailed.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		}
 		return
 	}

@@ -13,7 +13,7 @@ func RegisterWeeklyPackRoutes(r *gin.Engine, h handlers.WeeklyPackHandler, jwtSe
 	r.GET("/weekly-packs/:id", h.GetByID)
 
 	votes := r.Group("/weekly-packs")
-	votes.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoles(1, 2))
+	votes.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("member", "admin"))
 	{
 		votes.POST("/:id/votes", h.UpsertVote)
 		votes.GET("/:id/votes/me", h.MeVotes)

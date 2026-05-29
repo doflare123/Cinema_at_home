@@ -38,6 +38,10 @@ func (s *Server) InitRouters() {
 	kinopoiskH := handlers.NewKinopoiskHandler(kinopoiskSrv)
 	routers.RegisterKinopoiskRoutes(s.engine, kinopoiskH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 
+	statisticsSrv := services.NewStatisticsService(s.cont.GetRepository())
+	statisticsH := handlers.NewStatisticsHandler(statisticsSrv)
+	routers.RegisterStatisticsRoutes(s.engine, statisticsH)
+
 	weeklyPackSrv := services.NewWeeklyPackService(s.cont.GetRepository())
 	weeklyPackH := handlers.NewWeeklyPackHandler(weeklyPackSrv)
 	routers.RegisterWeeklyPackRoutes(s.engine, weeklyPackH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())

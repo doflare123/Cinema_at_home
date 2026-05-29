@@ -4,6 +4,7 @@ import (
 	"cinema/internal/api"
 	appErrors "cinema/internal/errors"
 	"cinema/internal/models/dto"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -34,6 +35,9 @@ func (s *kinopoiskService) Search(query string, limit int) ([]dto.KinopoiskSearc
 
 	results, err := s.searcher.SearchFilms(query, limit)
 	if err != nil {
+		if errors.Is(err, api.ErrKinopoiskAPIKeyMissing) {
+			return nil, appErrors.ErrKinopoiskNotConfigured
+		}
 		return nil, fmt.Errorf("%w: %w", appErrors.ErrKinopoiskSearchFailed, err)
 	}
 

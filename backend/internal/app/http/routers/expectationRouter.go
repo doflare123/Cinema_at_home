@@ -12,7 +12,7 @@ func RegisterExpectationRoutes(r *gin.Engine, expectationHandler handlers.Expect
 	r.GET("/expectations/:targetType/:id/summary", expectationHandler.Summary)
 
 	expectations := r.Group("/expectations")
-	expectations.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoles(1, 2))
+	expectations.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("member", "admin"))
 	{
 		expectations.POST("", expectationHandler.Upsert)
 		expectations.GET("/me", expectationHandler.Me)

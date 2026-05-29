@@ -68,3 +68,12 @@ func TestKinopoiskServiceSearchMapsProviderError(t *testing.T) {
 		t.Fatalf("expected upstream error to remain in chain, got %v", err)
 	}
 }
+
+func TestKinopoiskServiceSearchMapsMissingAPIKey(t *testing.T) {
+	svc := NewKinopoiskService(fakeKinopoiskSearcher{err: api.ErrKinopoiskAPIKeyMissing})
+
+	_, err := svc.Search("movie", 1)
+	if !errors.Is(err, appErrors.ErrKinopoiskNotConfigured) {
+		t.Fatalf("expected ErrKinopoiskNotConfigured, got %v", err)
+	}
+}

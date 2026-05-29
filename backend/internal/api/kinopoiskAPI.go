@@ -80,6 +80,9 @@ func (c *KinopoiskClient) SearchFilms(query string, limit int) ([]FilmResult, er
 	if query == "" {
 		return nil, fmt.Errorf("query is required")
 	}
+	if strings.TrimSpace(c.APIKey) == "" {
+		return nil, ErrKinopoiskAPIKeyMissing
+	}
 	if limit <= 0 || limit > 20 {
 		limit = 10
 	}
@@ -98,9 +101,7 @@ func (c *KinopoiskClient) SearchFilms(query string, limit int) ([]FilmResult, er
 	}
 
 	req.Header.Set("accept", "application/json")
-	if strings.TrimSpace(c.APIKey) != "" {
-		req.Header.Set("X-API-KEY", c.APIKey)
-	}
+	req.Header.Set("X-API-KEY", c.APIKey)
 
 	httpClient := c.HTTPClient
 	if httpClient == nil {

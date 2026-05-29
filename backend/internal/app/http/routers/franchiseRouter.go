@@ -13,7 +13,7 @@ func RegisterFranchiseRoutes(r *gin.Engine, franchiseHandler handlers.FranchiseH
 	r.GET("/franchises/:id", franchiseHandler.GetByID)
 
 	admin := r.Group("/admin/franchises")
-	admin.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoles(2))
+	admin.Use(middlewares.JWTAuthMiddleware(jwtSecret, reps...), middlewares.RequireActiveStatus(), middlewares.RequireRoleNames("admin"))
 	{
 		admin.POST("", franchiseHandler.Create)
 		admin.POST("/:id/movies", franchiseHandler.AddMovie)

@@ -82,3 +82,52 @@ func TestKinopoiskHandlerSearchMapsProviderError(t *testing.T) {
 		t.Fatalf("response leaked upstream error detail: %s", recorder.Body.String())
 	}
 }
+
+func TestKinopoiskHandlerSearchMapsNotConfigured(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := NewKinopoiskHandler(stubKinopoiskService{
+		search: func(query string, limit int) ([]dto.KinopoiskSearchResult, error) {
+			return nil, appErrors.ErrKinopoiskNotConfigured
+		},
+	})
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/kinopoisk/search?query=matrix", nil)
+
+	handler.Search(ctx)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), appErrors.ErrKinopoiskNotConfigured.Error()) {
+		t.Fatalf("expected not configured message, got %s", recorder.Body.String())
+	}
+}
+
+func TestKinopoiskHandlerSearchHidesUnexpectedErrorDetails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := NewKinopoiskHandler(stubKinopoiskService{
+		search: func(query string, limit int) ([]dto.KinopoiskSearchResult, error) {
+			return nil, fmt.Errorf("unexpected internal detail")
+		},
+	})
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/kinopoisk/search?query=matrix", nil)
+
+	handler.Search(ctx)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "internal server error") {
+		t.Fatalf("expected generic internal error, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "unexpected internal detail") {
+		t.Fatalf("response leaked internal detail: %s", recorder.Body.String())
+	}
+}
