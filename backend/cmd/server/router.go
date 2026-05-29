@@ -45,4 +45,8 @@ func (s *Server) InitRouters() {
 	weeklyPackSrv := services.NewWeeklyPackService(s.cont.GetRepository())
 	weeklyPackH := handlers.NewWeeklyPackHandler(weeklyPackSrv)
 	routers.RegisterWeeklyPackRoutes(s.engine, weeklyPackH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	importSrv := services.NewImportService(s.cont.GetRepository())
+	importH := handlers.NewImportHandler(importSrv)
+	routers.RegisterImportRoutes(s.engine, importH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 }

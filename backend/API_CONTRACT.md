@@ -6,6 +6,7 @@ This document describes the new and updated backend endpoints added in the curre
 - `statistics`
 - admin-only movie creation flow
 - weekly pack mini app helpers (`current`, `me/limits`)
+- admin excel import (`catalog`)
 
 All responses are JSON.
 
@@ -230,6 +231,36 @@ Response:
 }
 ```
 
+## Import
+
+### Admin Excel catalog import
+- `POST /admin/import/excel/catalog`
+- Access: `admin`
+- Content-Type: `multipart/form-data`
+- Purpose: one-time or repeated ingestion of movie titles from legacy Excel
+
+Form fields:
+- `file` (required): `.xlsx`/`.xlsm` workbook file
+- `dry_run` (optional bool): when `true`, parse + validate + report without writing movies
+
+Response:
+```json
+{
+  "import": {
+    "run_id": 31,
+    "file_name": "catalog.xlsm",
+    "dry_run": false,
+    "rows_total": 240,
+    "rows_parsed": 152,
+    "rows_created": 77,
+    "rows_skipped_existing": 75,
+    "rows_skipped_invalid": 88,
+    "sample_titles": ["Fight Club", "Interstellar"],
+    "warnings": []
+  }
+}
+```
+
 ## Error Contract
 
 Current API uses:
@@ -256,9 +287,10 @@ Covered in this stage:
 - raw-data summary statistics
 - role-name based authorization for updated routes
 - weekly pack mini app helpers (`current`, `me/limits`)
+- admin excel import with audit trail (`import_runs`)
 
 Deferred to later stages:
 - telegram notification workflows
 - full mini app UI integration
 - extended analytics dimensions
-- import pipeline hardening
+- import pipeline hardening for expectations/reviews/franchises
