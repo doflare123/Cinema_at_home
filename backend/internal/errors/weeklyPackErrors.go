@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrWeeklyPackNotFound           = errors.New("weekly pack not found")
+	ErrWeeklyPackCurrentNotFound    = errors.New("current voting weekly pack not found")
 	ErrInvalidWeeklyPackName        = errors.New("weekly pack name is required")
 	ErrInvalidWeeklyPackSchedule    = errors.New("weekly pack ends_at must be after starts_at")
 	ErrInvalidWeeklyPackStatus      = errors.New("invalid weekly pack status")

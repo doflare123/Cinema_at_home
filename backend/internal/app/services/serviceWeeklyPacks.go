@@ -28,11 +28,15 @@ var weeklyPackVoteLimits = map[int]int{
 	-2: 1,
 }
 
+var weeklyPackLimitedScores = []int{3, 2, 1, -2}
+
 type WeeklyPackService interface {
 	List() ([]dto.WeeklyPackListItem, error)
+	GetCurrentVoting() (dto.WeeklyPackDetailView, error)
 	GetByID(id uint) (dto.WeeklyPackDetailView, error)
 	UpsertVote(packID, userID uint, req dto.UpsertWeeklyPackVoteRequest) (dto.WeeklyPackUserVoteItem, error)
 	GetUserVotes(packID, userID uint) (dto.WeeklyPackUserVotesView, error)
+	GetUserVoteLimits(packID, userID uint) (dto.WeeklyPackUserVoteLimitsView, error)
 	Create(createdByUserID uint, req dto.CreateWeeklyPackRequest) (dto.WeeklyPackDetailView, error)
 	AddMovie(packID uint, req dto.AddWeeklyPackMovieRequest) (dto.WeeklyPackDetailView, error)
 	UpdateStatus(packID uint, req dto.UpdateWeeklyPackStatusRequest) (dto.WeeklyPackDetailView, error)
@@ -70,6 +74,19 @@ func (s *weeklyPackService) List() ([]dto.WeeklyPackListItem, error) {
 
 func (s *weeklyPackService) GetByID(id uint) (dto.WeeklyPackDetailView, error) {
 	return s.loadDetail(s.rep, id)
+}
+
+func (s *weeklyPackService) GetCurrentVoting() (dto.WeeklyPackDetailView, error) {
+	var pack models.WeeklyPack
+	if err := s.rep.Where("status = ?", weeklyPackStatusVoting).
+		Order("COALESCE(starts_at, created_at) DESC, id DESC").
+		First(&pack).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return dto.WeeklyPackDetailView{}, appErrors.ErrWeeklyPackCurrentNotFound
+		}
+		return dto.WeeklyPackDetailView{}, err
+	}
+	return s.loadDetail(s.rep, pack.ID)
 }
 
 func (s *weeklyPackService) UpsertVote(packID, userID uint, req dto.UpsertWeeklyPackVoteRequest) (dto.WeeklyPackUserVoteItem, error) {
@@ -197,6 +214,45 @@ func (s *weeklyPackService) GetUserVotes(packID, userID uint) (dto.WeeklyPackUse
 	return dto.WeeklyPackUserVotesView{
 		PackID: packID,
 		Votes:  items,
+	}, nil
+}
+
+func (s *weeklyPackService) GetUserVoteLimits(packID, userID uint) (dto.WeeklyPackUserVoteLimitsView, error) {
+	if _, err := s.loadPack(s.rep, packID); err != nil {
+		return dto.WeeklyPackUserVoteLimitsView{}, err
+	}
+
+	var votes []models.WeeklyPackVote
+	if err := s.rep.Where("pack_id = ? AND user_id = ?", packID, userID).Find(&votes).Error; err != nil {
+		return dto.WeeklyPackUserVoteLimitsView{}, err
+	}
+
+	usedByScore := make(map[int]int, len(weeklyPackVoteLimits)+1)
+	for _, vote := range votes {
+		usedByScore[vote.Score]++
+	}
+
+	limits := make([]dto.WeeklyPackVoteLimitItem, 0, len(weeklyPackLimitedScores))
+	for _, score := range weeklyPackLimitedScores {
+		limit := weeklyPackVoteLimits[score]
+		used := usedByScore[score]
+		remaining := limit - used
+		if remaining < 0 {
+			remaining = 0
+		}
+		limits = append(limits, dto.WeeklyPackVoteLimitItem{
+			Score:     score,
+			Limit:     limit,
+			Used:      used,
+			Remaining: remaining,
+		})
+	}
+
+	return dto.WeeklyPackUserVoteLimitsView{
+		PackID:             packID,
+		Limits:             limits,
+		ZeroScoreUnlimited: true,
+		ZeroScoreUsed:      usedByScore[0],
 	}, nil
 }
 

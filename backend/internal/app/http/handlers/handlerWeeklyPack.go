@@ -11,9 +11,11 @@ import (
 
 type WeeklyPackHandler interface {
 	List(c *gin.Context)
+	Current(c *gin.Context)
 	GetByID(c *gin.Context)
 	UpsertVote(c *gin.Context)
 	MeVotes(c *gin.Context)
+	MeVoteLimits(c *gin.Context)
 	Create(c *gin.Context)
 	AddMovie(c *gin.Context)
 	UpdateStatus(c *gin.Context)
@@ -44,6 +46,19 @@ func (h *weeklyPackHandler) GetByID(c *gin.Context) {
 	item, err := h.service.GetByID(id)
 	if err != nil {
 		if err == appErrors.ErrWeeklyPackNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"weekly_pack": item})
+}
+
+func (h *weeklyPackHandler) Current(c *gin.Context) {
+	item, err := h.service.GetCurrentVoting()
+	if err != nil {
+		if err == appErrors.ErrWeeklyPackCurrentNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
@@ -105,6 +120,27 @@ func (h *weeklyPackHandler) MeVotes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"votes": view})
+}
+
+func (h *weeklyPackHandler) MeVoteLimits(c *gin.Context) {
+	packID, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	userID, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	view, err := h.service.GetUserVoteLimits(packID, userID)
+	if err != nil {
+		if err == appErrors.ErrWeeklyPackNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"limits": view})
 }
 
 func (h *weeklyPackHandler) Create(c *gin.Context) {

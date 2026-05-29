@@ -41,27 +41,27 @@ type WeeklyPackVoteBreakdownItem struct {
 }
 
 type WeeklyPackMovieView struct {
-	MovieID      uint                         `json:"movie_id"`
-	Title        string                       `json:"title"`
-	Poster       string                       `json:"poster"`
-	ReleaseDate  int                          `json:"release_date"`
-	SortOrder    int                          `json:"sort_order"`
-	ScoreTotal   int                          `json:"score_total"`
-	Plus3Count   int                          `json:"plus_3_count"`
-	Plus2Count   int                          `json:"plus_2_count"`
-	Plus1Count   int                          `json:"plus_1_count"`
-	ZeroCount    int                          `json:"zero_count"`
-	Minus2Count  int                          `json:"minus_2_count"`
-	Votes        []WeeklyPackVoteBreakdownItem `json:"votes"`
+	MovieID     uint                          `json:"movie_id"`
+	Title       string                        `json:"title"`
+	Poster      string                        `json:"poster"`
+	ReleaseDate int                           `json:"release_date"`
+	SortOrder   int                           `json:"sort_order"`
+	ScoreTotal  int                           `json:"score_total"`
+	Plus3Count  int                           `json:"plus_3_count"`
+	Plus2Count  int                           `json:"plus_2_count"`
+	Plus1Count  int                           `json:"plus_1_count"`
+	ZeroCount   int                           `json:"zero_count"`
+	Minus2Count int                           `json:"minus_2_count"`
+	Votes       []WeeklyPackVoteBreakdownItem `json:"votes"`
 }
 
 type WeeklyPackDetailView struct {
-	ID              uint                `json:"id"`
-	Name            string              `json:"name"`
-	Status          string              `json:"status"`
-	StartsAt        *time.Time          `json:"starts_at,omitempty"`
-	EndsAt          *time.Time          `json:"ends_at,omitempty"`
-	CreatedByUserID uint                `json:"created_by_user_id"`
+	ID              uint                  `json:"id"`
+	Name            string                `json:"name"`
+	Status          string                `json:"status"`
+	StartsAt        *time.Time            `json:"starts_at,omitempty"`
+	EndsAt          *time.Time            `json:"ends_at,omitempty"`
+	CreatedByUserID uint                  `json:"created_by_user_id"`
 	Movies          []WeeklyPackMovieView `json:"movies"`
 }
 
@@ -71,6 +71,20 @@ type WeeklyPackUserVoteItem struct {
 }
 
 type WeeklyPackUserVotesView struct {
-	PackID uint                    `json:"pack_id"`
+	PackID uint                     `json:"pack_id"`
 	Votes  []WeeklyPackUserVoteItem `json:"votes"`
+}
+
+type WeeklyPackVoteLimitItem struct {
+	Score     int `json:"score"`
+	Limit     int `json:"limit"`
+	Used      int `json:"used"`
+	Remaining int `json:"remaining"`
+}
+
+type WeeklyPackUserVoteLimitsView struct {
+	PackID             uint                      `json:"pack_id"`
+	Limits             []WeeklyPackVoteLimitItem `json:"limits"`
+	ZeroScoreUnlimited bool                      `json:"zero_score_unlimited"`
+	ZeroScoreUsed      int                       `json:"zero_score_used"`
 }

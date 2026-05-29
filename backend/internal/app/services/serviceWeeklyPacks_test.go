@@ -43,6 +43,64 @@ func TestWeeklyPackServiceStatusTransitionRequiresMovies(t *testing.T) {
 	}
 }
 
+func TestWeeklyPackServiceGetCurrentVoting(t *testing.T) {
+	svc, _, _, packID, _ := newTestWeeklyPackService(t)
+
+	current, err := svc.GetCurrentVoting()
+	if err != nil {
+		t.Fatalf("GetCurrentVoting failed: %v", err)
+	}
+	if current.ID != packID {
+		t.Fatalf("expected current pack %d, got %d", packID, current.ID)
+	}
+}
+
+func TestWeeklyPackServiceGetCurrentVotingNotFound(t *testing.T) {
+	svc, rep, _, packID, _ := newTestWeeklyPackService(t)
+
+	if err := rep.Model(&models.WeeklyPack{}).Where("id = ?", packID).Update("status", "closed").Error; err != nil {
+		t.Fatalf("close pack failed: %v", err)
+	}
+
+	_, err := svc.GetCurrentVoting()
+	if !errors.Is(err, appErrors.ErrWeeklyPackCurrentNotFound) {
+		t.Fatalf("expected ErrWeeklyPackCurrentNotFound, got %v", err)
+	}
+}
+
+func TestWeeklyPackServiceGetUserVoteLimits(t *testing.T) {
+	svc, _, userID, packID, movieIDs := newTestWeeklyPackService(t)
+
+	if _, err := svc.UpsertVote(packID, userID, dto.UpsertWeeklyPackVoteRequest{MovieID: movieIDs[0], Score: intPtr(3)}); err != nil {
+		t.Fatalf("vote +3 failed: %v", err)
+	}
+	if _, err := svc.UpsertVote(packID, userID, dto.UpsertWeeklyPackVoteRequest{MovieID: movieIDs[1], Score: intPtr(0)}); err != nil {
+		t.Fatalf("vote 0 failed: %v", err)
+	}
+
+	limits, err := svc.GetUserVoteLimits(packID, userID)
+	if err != nil {
+		t.Fatalf("GetUserVoteLimits failed: %v", err)
+	}
+	if limits.PackID != packID {
+		t.Fatalf("expected pack id %d, got %d", packID, limits.PackID)
+	}
+	if !limits.ZeroScoreUnlimited {
+		t.Fatalf("expected ZeroScoreUnlimited=true")
+	}
+	if limits.ZeroScoreUsed != 1 {
+		t.Fatalf("expected ZeroScoreUsed=1, got %d", limits.ZeroScoreUsed)
+	}
+
+	if len(limits.Limits) != 4 {
+		t.Fatalf("expected 4 limited scores, got %d", len(limits.Limits))
+	}
+	first := limits.Limits[0]
+	if first.Score != 3 || first.Limit != 1 || first.Used != 1 || first.Remaining != 0 {
+		t.Fatalf("unexpected +3 limit view: %+v", first)
+	}
+}
+
 func newTestWeeklyPackService(t *testing.T) (WeeklyPackService, *testRepository, uint, uint, []uint) {
 	t.Helper()
 

@@ -12,9 +12,11 @@ import (
 type fakeWeeklyPackHandler struct{}
 
 func (fakeWeeklyPackHandler) List(c *gin.Context)         { c.Status(http.StatusOK) }
+func (fakeWeeklyPackHandler) Current(c *gin.Context)      { c.Status(http.StatusOK) }
 func (fakeWeeklyPackHandler) GetByID(c *gin.Context)      { c.Status(http.StatusOK) }
 func (fakeWeeklyPackHandler) UpsertVote(c *gin.Context)   { c.Status(http.StatusOK) }
 func (fakeWeeklyPackHandler) MeVotes(c *gin.Context)      { c.Status(http.StatusOK) }
+func (fakeWeeklyPackHandler) MeVoteLimits(c *gin.Context) { c.Status(http.StatusOK) }
 func (fakeWeeklyPackHandler) Create(c *gin.Context)       { c.Status(http.StatusCreated) }
 func (fakeWeeklyPackHandler) AddMovie(c *gin.Context)     { c.Status(http.StatusCreated) }
 func (fakeWeeklyPackHandler) UpdateStatus(c *gin.Context) { c.Status(http.StatusOK) }
@@ -28,6 +30,20 @@ func TestRegisterWeeklyPackRoutesPublicEndpoints(t *testing.T) {
 	RegisterWeeklyPackRoutes(r, fakeWeeklyPackHandler{}, "secret")
 
 	req := httptest.NewRequest(http.MethodGet, "/weekly-packs", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestRegisterWeeklyPackRoutesCurrentEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	RegisterWeeklyPackRoutes(r, fakeWeeklyPackHandler{}, "secret")
+
+	req := httptest.NewRequest(http.MethodGet, "/weekly-packs/current", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -76,5 +92,19 @@ func TestRegisterWeeklyPackRoutesVoteAllowsMember(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestRegisterWeeklyPackRoutesVoteLimitsRequiresAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	RegisterWeeklyPackRoutes(r, fakeWeeklyPackHandler{}, "secret")
+
+	req := httptest.NewRequest(http.MethodGet, "/weekly-packs/1/votes/me/limits", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }
