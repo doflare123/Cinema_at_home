@@ -33,6 +33,7 @@ func initServer(cont container.Container) (*Server, error) {
 			&models.WeeklyPack{},
 			&models.WeeklyPackMovie{},
 			&models.WeeklyPackVote{},
+			&models.TelegramNotification{},
 		); err != nil {
 			logger.Error("Error with auto migration: %s", err)
 		}

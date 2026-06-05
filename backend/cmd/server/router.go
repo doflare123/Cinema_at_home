@@ -49,4 +49,8 @@ func (s *Server) InitRouters() {
 	importSrv := services.NewImportService(s.cont.GetRepository())
 	importH := handlers.NewImportHandler(importSrv)
 	routers.RegisterImportRoutes(s.engine, importH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
+
+	telegramNotificationSrv := services.NewTelegramNotificationService(s.cont.GetRepository())
+	telegramNotificationH := handlers.NewTelegramNotificationHandler(telegramNotificationSrv)
+	routers.RegisterTelegramNotificationRoutes(s.engine, telegramNotificationH, s.cont.GetConfig().JWTSecretKey, s.cont.GetRepository())
 }

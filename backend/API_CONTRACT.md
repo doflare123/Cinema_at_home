@@ -7,6 +7,7 @@ This document describes the new and updated backend endpoints added in the curre
 - admin-only movie creation flow
 - weekly pack mini app helpers (`current`, `me/limits`)
 - admin excel import (`catalog`)
+- telegram notification queue
 
 All responses are JSON.
 
@@ -261,6 +262,100 @@ Response:
 }
 ```
 
+## Telegram Notifications
+
+This is a backend queue/journal module. Telegram auth remains under `/auth/telegram`; notification rows are managed under admin-only routes and can later be consumed by a bot/worker.
+
+Allowed notification types:
+- `weekly_pack_results`
+- `pending_user`
+- `movie_proposal`
+
+Allowed statuses:
+- `queued`
+- `sent`
+- `failed`
+
+### Admin list notifications
+- `GET /admin/telegram/notifications`
+- `GET /admin/telegram/notifications?status=queued|sent|failed&type=weekly_pack_results|pending_user|movie_proposal`
+- Access: `admin`
+- Purpose: inspect the notification queue and delivery journal
+
+Response:
+```json
+{
+  "notifications": [
+    {
+      "id": 12,
+      "type": "weekly_pack_results",
+      "status": "queued",
+      "entity_id": 17,
+      "payload": {"weekly_pack_id": 17},
+      "attempts": 0,
+      "enqueued_by_user_id": 2,
+      "created_at": "2026-06-05T12:00:00Z",
+      "updated_at": "2026-06-05T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Admin enqueue notification
+- `POST /admin/telegram/notifications`
+- Access: `admin`
+- Purpose: manually enqueue notification work for a known backend entity
+
+Request body:
+```json
+{
+  "type": "movie_proposal",
+  "entity_id": 42,
+  "target_user_id": 7,
+  "payload": {"proposal_id": 42}
+}
+```
+
+Rules:
+- `entity_id` is validated against the matching backend entity and expected state.
+- `weekly_pack_results` requires a `closed` or `archived` weekly pack.
+- `pending_user` requires a user with `status = pending`.
+- `movie_proposal` requires a proposal with `status = pending`.
+- `target_user_id`, when present, must reference an existing user.
+- `payload`, when present, must be a JSON object.
+- if `payload` is omitted, backend creates a minimal JSON object for the notification type.
+- status on create is always `queued`.
+
+Response:
+```json
+{
+  "notification": {
+    "id": 12,
+    "type": "movie_proposal",
+    "status": "queued"
+  }
+}
+```
+
+### Admin retry notification
+- `POST /admin/telegram/notifications/:id/retry`
+- Access: `admin`
+- Purpose: put a failed notification back into the queue
+
+Rules:
+- only `failed` notifications can be retried.
+- retry sets status back to `queued` and clears `last_error`.
+
+Response:
+```json
+{
+  "notification": {
+    "id": 12,
+    "status": "queued"
+  }
+}
+```
+
 ## Error Contract
 
 Current API uses:
@@ -288,9 +383,10 @@ Covered in this stage:
 - role-name based authorization for updated routes
 - weekly pack mini app helpers (`current`, `me/limits`)
 - admin excel import with audit trail (`import_runs`)
+- telegram notification queue/journal with admin enqueue/retry
 
 Deferred to later stages:
-- telegram notification workflows
+- telegram delivery worker/bot workflows
 - full mini app UI integration
 - extended analytics dimensions
 - import pipeline hardening for expectations/reviews/franchises

@@ -153,6 +153,46 @@
 5. MVP5: Telegram Mini App.
 6. MVP6: Расширенная аналитика.
 
+## Текущее состояние на 2026-06-05
+
+### Backend: закрыто / в работе
+- Базовый контур auth/users закрыт: обычный логин/регистрация, Telegram auth payload/initData проверяются на backend, новые пользователи попадают в `pending`, админ переводит пользователей в `active/rejected/blocked`.
+- Защищенные роуты используют `JWTAuthMiddleware(..., repository)` и проверяют актуальные `status`/`role` из БД, а не только claims токена.
+- Фильмы доступны публично read-only; создание фильма вынесено в admin-only `POST /admin/movies`, legacy `POST /film/` оставлен как admin-only alias.
+- Франшизы реализованы отдельной сущностью, связь фильм-франшиза хранит порядок/часть.
+- Ожидания реализованы отдельно от weekly voting: `score 1..10` или `refuse`, среднее считается только по числовым голосам.
+- Reviews реализованы с простым режимом и режимом criteria/derived final score; обновление оценки пользователя идемпотентное.
+- Proposals реализованы: участник создает предложение, админ модерирует `pending/approved/rejected`, при approve создается/линкуется фильм, есть audit-поля модерации.
+- Kinopoisk search реализован как backend provider слой; пустой API key и upstream ошибки мапятся без утечки внутренних деталей.
+- Statistics summary реализован публично и считает агрегаты из сырых таблиц.
+- Weekly packs реализованы: статусы `draft/voting/closed/archived`, шкала `+3/+2/+1/0/-2`, backend-лимиты, детализация кто как голосовал, current voting pack и remaining limits для Mini App.
+- Import MVP реализован: admin-only `POST /admin/import/excel/catalog`, dry-run, парсинг `.xlsx/.xlsm` через zip/xml, нормализация/дедупликация названий, создание фильмов с fallback metadata, таблица `import_runs` для аудита.
+- API contract зафиксирован в `backend/API_CONTRACT.md`.
+
+### Backend: проверки
+- Последний полный прогон backend: `go test ./...` в `backend` был зеленым после добавления import/weekly-pack helper API.
+- После тестов кэш `D:\dev_prikols\Cinema_at_home\.cache\go-build` очищался.
+- Postgres integration tests для миграций есть, но фактический запуск против реальной PostgreSQL БД заблокирован без валидного `TEST_POSTGRES_DSN`.
+- Reviewer-субагенты в последних сессиях зависали по timeout; обязательное ревью выполнялось вручную, найденные edge cases исправлены (например, numeric movie title `1917`, смешивание листов Excel).
+
+### Frontend: состояние
+- В корне есть незавершенные изменения клиента (`client/package*.json`, `client/src/App.*`, `client/src/index.css`, `client/vite.config.js`, `client/src/api.js`).
+- По текущей договоренности пользователь переключил фокус на backend; frontend не считать завершенным.
+
+### Незакрыто до полноценного backend этапа
+- `/telegram` notification module отсутствует: пока есть Telegram auth, но нет backend-очереди/журнала уведомлений, отправки weekly pack итогов, уведомлений админа о pending users/proposals.
+- Import пока закрывает каталог фильмов как MVP; импорт ожиданий/reviews/franchises из Excel оставлен на hardening/следующий import-проход.
+- Docker Compose/deployment контур не закрыт.
+- Расширенная аналитика по участникам/жанрам/периодам не закрыта.
+
+### Следующий рекомендуемый этап
+- Делать `/telegram` notification module как backend-only слой:
+- добавить таблицу/модель `telegram_notifications`;
+- сервис создания уведомлений для `weekly_pack_results`, `pending_user`, `movie_proposal`;
+- admin endpoint для ручного enqueue/retry;
+- unit-тесты сервиса/handler/router;
+- после задачи обязательно запустить reviewer и полный `go test ./...` с очисткой кэша.
+
 ## Постоянные правила выполнения задач (обязательные)
 1. Для сложных задач почти всегда использовать субагентов и подбирать их по типу работ:
 - структура проекта/поиск границ — `mapper`;
